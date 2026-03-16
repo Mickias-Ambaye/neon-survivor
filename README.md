@@ -4,7 +4,7 @@ A Vampire Survivors-inspired arena survival game built with Python and Pygame. A
 
 ## Play Online
 
-**[Play Neon Survivor in your browser](https://mickias136.github.io/neon-survivor/)**
+**[Play Neon Survivor in your browser](https://mickias-ambaye.github.io/neon-survivor/)**
 
 ## Features
 
