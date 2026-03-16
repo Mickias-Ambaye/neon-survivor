@@ -26,14 +26,6 @@ A Vampire Survivors-inspired arena survival game built with Python and Pygame. A
 | R | Reroll upgrade choices |
 | P / Escape | Pause |
 
-## Run Locally
-
-```bash
-pip install pygame numpy
-cd neon_survivor
-python main.py
-```
-
 ## Tech
 
 Built entirely in Python with Pygame. No sprites, no audio files — everything is rendered and synthesized at runtime using math.
