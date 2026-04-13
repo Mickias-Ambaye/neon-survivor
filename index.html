@@ -307,7 +307,7 @@ function resetGame() {
   waves = {wave:0, enemiesToSpawn:[], spawnTimer:0, intermission:0, waveActive:false, bossActive:false};
   upgrades = {xp:0, level:1, choosing:false, choices:[], rerolls: meta.reroll_level||0};
   score=0; combo=0; maxCombo=0; comboTimer=0; creditsEarned=0; kills=0;
-  fx = {shakeIntensity:0, flashAlpha:0, flashColor:COL.white, hitstopFrames:0, slowmoTimer:0, slowmoScale:1, shockwaveRings:[]};
+  fx = {shakeIntensity:0, shakeTimer:0, flashAlpha:0, flashColor:COL.white, hitstopFrames:0, slowmoTimer:0, slowmoScale:1, shockwaveRings:[]};
   frame = 0;
 }
 
@@ -743,7 +743,7 @@ function update() {
     if (etype === 'boss') {
       enemies.push(spawnBoss(waves.wave));
       bossWarningTimer = 120;
-      fx.shakeIntensity = 12;
+      fx.shakeIntensity = 5; fx.shakeTimer=0;
       fx.flashColor = COL.boss; fx.flashAlpha = 40;
       spawnText(W/2-80, 80, 'BOSS INCOMING', COL.boss, 36);
       SFX.bossSpawn();
@@ -889,7 +889,7 @@ function update() {
       if (player.invulnTimer <= 0) {
         player.hp--;
         player.invulnTimer = PLAYER_INVULN_TIME;
-        fx.shakeIntensity = 15;
+        fx.shakeIntensity = 5; fx.shakeTimer=0;
         fx.flashColor = COL.red; fx.flashAlpha = 80;
         fx.hitstopFrames = 5;
         emitParticles(player.x,player.y,COL.red,20,4);
@@ -966,7 +966,7 @@ function update() {
       if (player.invulnTimer <= 0) {
         player.hp -= ep.damage;
         player.invulnTimer = PLAYER_INVULN_TIME;
-        fx.shakeIntensity=10; fx.flashColor=COL.red; fx.flashAlpha=60; fx.hitstopFrames=4;
+        fx.shakeIntensity=4; fx.shakeTimer=0; fx.flashColor=COL.red; fx.flashAlpha=60; fx.hitstopFrames=4;
         SFX.playerHit();
         spawnText(player.x,player.y,'HIT!',COL.red,26);
         if (player.hp<=0) die();
@@ -1021,7 +1021,7 @@ function damageEnemy(e, amount) {
 
 function onEnemyKilled(e) {
   emitParticles(e.x,e.y,e.color,18,4);
-  fx.hitstopFrames=3; fx.shakeIntensity=4;
+  fx.hitstopFrames=3; fx.shakeIntensity=2; fx.shakeTimer=0;
   combo++; comboTimer=120; maxCombo=Math.max(maxCombo,combo);
   const pts = 10*combo; score+=pts; kills++;
   spawnText(e.x,e.y,'+'+pts,e.color,18);
@@ -1042,7 +1042,7 @@ function onEnemyKilled(e) {
   if (e.isBoss) {
     fx.slowmoTimer=60; fx.slowmoScale=0.15;
     fx.flashColor=COL.boss; fx.flashAlpha=80;
-    fx.shakeIntensity=20;
+    fx.shakeIntensity=6; fx.shakeTimer=0;
     emitParticles(e.x,e.y,COL.boss,50,6);
     spawnText(e.x-40,e.y-40,'BOSS DEFEATED!',COL.boss,34);
   }
@@ -1059,7 +1059,7 @@ function onEnemyKilled(e) {
 function die() {
   state = 'GAMEOVER';
   emitParticles(player.x,player.y,COL.player,60,6);
-  fx.shakeIntensity=8; fx.slowmoTimer=60; fx.slowmoScale=0.2;
+  fx.shakeIntensity=4; fx.shakeTimer=0; fx.slowmoTimer=60; fx.slowmoScale=0.2;
   creditsEarned = Math.floor(score / 10);
   SFX.playerDeath();
   // Save meta
@@ -1087,7 +1087,7 @@ function updateTexts() {
   }
 }
 function updateFx() {
-  if (fx.shakeIntensity>0) { fx.shakeIntensity*=0.85; if(fx.shakeIntensity<0.5) fx.shakeIntensity=0; }
+  if (fx.shakeIntensity>0) { fx.shakeTimer++; fx.shakeIntensity*=0.88; if(fx.shakeIntensity<0.3||fx.shakeTimer>180) { fx.shakeIntensity=0; fx.shakeTimer=0; } }
   if (fx.flashAlpha>0) fx.flashAlpha-=6;
   fx.shockwaveRings = fx.shockwaveRings.filter(r => { r.radius+=5; return r.radius<r.maxRadius; });
 }
@@ -1124,9 +1124,10 @@ function drawShape(cx, cy, shape, r, color, outline=COL.white) {
 function draw() {
   // Shake offset
   let sx=0,sy=0;
-  if (fx.shakeIntensity>0.5) {
+  if (fx.shakeIntensity>0.3) {
     const t=performance.now()*0.001;
-    sx=Math.sin(t*37)*fx.shakeIntensity; sy=Math.cos(t*29)*fx.shakeIntensity*0.8;
+    const si=Math.min(fx.shakeIntensity, 6);
+    sx=Math.sin(t*37)*si; sy=Math.cos(t*29)*si*0.8;
   }
   ctx.save();
   ctx.translate(sx,sy);
@@ -1343,6 +1344,10 @@ function drawHUD() {
   ctx.fillText(score.toLocaleString(), W-20, 36);
   ctx.font='13px Arial'; ctx.fillStyle=COL.uiTextDim;
   ctx.fillText('SCORE', W-20, 16);
+  // Best score
+  const best = Math.max(meta.bestScore, score);
+  ctx.font='11px Arial'; ctx.fillStyle=COL.amber;
+  ctx.fillText('BEST: '+best.toLocaleString(), W-20, 52);
   ctx.textAlign='left';
   // Combo
   if (combo>1) {
@@ -1450,6 +1455,10 @@ function drawMenu() {
   }
   ctx.font='13px Arial'; ctx.fillStyle=COL.amber;
   ctx.fillText('Credits: '+(meta.credits||0).toLocaleString(), W/2, H/2+108);
+  if (meta.bestScore > 0) {
+    ctx.font='bold 16px Arial'; ctx.fillStyle=COL.amber;
+    ctx.fillText('Best Score: '+meta.bestScore.toLocaleString(), W/2, H/2+130);
+  }
   ctx.font='13px Arial'; ctx.fillStyle='#323750';
   ctx.fillText('WASD/Arrows \u2014 Move  |  SPACE \u2014 Dash  |  1/2/3 \u2014 Upgrades  |  ESC \u2014 Pause', W/2, H/2+148);
   ctx.textAlign='left';
@@ -1537,7 +1546,7 @@ document.addEventListener('keydown', e => {
     if (e.code==='Enter'||e.code==='Space') { resetGame(); state='PLAYING'; startMusic(); SFX.menuSelect(); }
     else if (e.code==='KeyU') { state='SHOP'; SFX.menuSelect(); }
   } else if (state === 'SHOP') {
-    if (e.code==='Escape') { state='MENU'; SFX.menuSelect(); }
+    if (e.code==='Escape') { state='MENU'; fx.shakeIntensity=0; fx.shakeTimer=0; SFX.menuSelect(); }
     const items=Object.keys(META_UPGRADES);
     for (let i=0;i<items.length;i++) {
       if (e.code==='Digit'+(i+1)) tryBuyMeta(items[i]);
@@ -1557,10 +1566,10 @@ document.addEventListener('keydown', e => {
     }
   } else if (state === 'PAUSED') {
     if (e.code==='Escape') state='PLAYING';
-    else if (e.code==='KeyQ') { stopMusic(); state='MENU'; }
+    else if (e.code==='KeyQ') { stopMusic(); state='MENU'; fx.shakeIntensity=0; fx.shakeTimer=0; }
   } else if (state === 'GAMEOVER') {
     if (e.code==='KeyR') { resetGame(); state='PLAYING'; startMusic(); }
-    else if (e.code==='KeyQ') { stopMusic(); state='MENU'; }
+    else if (e.code==='KeyQ') { stopMusic(); state='MENU'; fx.shakeIntensity=0; fx.shakeTimer=0; }
   }
 });
 
