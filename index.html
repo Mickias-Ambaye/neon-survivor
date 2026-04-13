@@ -7,7 +7,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#080a1c;display:flex;align-items:center;justify-content:center}
-canvas{display:block;image-rendering:pixelated;cursor:none}
+canvas{display:block;image-rendering:pixelated}
 </style>
 </head>
 <body>
@@ -32,10 +32,10 @@ function resize() {
   scale = Math.min(sw / W, sh / H);
   canvas.style.width = (W * scale) + 'px';
   canvas.style.height = (H * scale) + 'px';
-  offsetX = (sw - W * scale) / 2;
-  offsetY = (sh - H * scale) / 2;
-  canvas.style.marginLeft = offsetX + 'px';
-  canvas.style.marginTop = offsetY + 'px';
+  canvas.style.margin = '0';
+}
+function updateCursor() {
+  canvas.style.cursor = (state === 'PLAYING' && !upgrades.choosing) ? 'none' : 'default';
 }
 window.addEventListener('resize', resize);
 resize();
@@ -1059,7 +1059,7 @@ function onEnemyKilled(e) {
 function die() {
   state = 'GAMEOVER';
   emitParticles(player.x,player.y,COL.player,60,6);
-  fx.shakeIntensity=25; fx.slowmoTimer=60; fx.slowmoScale=0.2;
+  fx.shakeIntensity=8; fx.slowmoTimer=60; fx.slowmoScale=0.2;
   creditsEarned = Math.floor(score / 10);
   SFX.playerDeath();
   // Save meta
@@ -1620,6 +1620,7 @@ let lastTime = 0;
 function gameLoop(timestamp) {
   update();
   draw();
+  updateCursor();
   mouseClicked = false;
   requestAnimationFrame(gameLoop);
 }
